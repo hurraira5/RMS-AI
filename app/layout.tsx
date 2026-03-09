@@ -1,32 +1,25 @@
-import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
-import './globals.css';
-import { FirebaseProvider } from '@/components/features/FirebaseProvider';
-import { CartProvider } from '@/components/features/CartProvider';
-import ErrorBoundary from '@/components/features/ErrorBoundary';
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
 
 const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-sans',
+  subsets: ["latin"],
+  variable: "--font-sans",
 });
 
 export const metadata: Metadata = {
-  title: 'Fuse Food Delivery',
-  description: 'Premium fast-food ordering and delivery platform',
+  title: "Food Delivery App",
+  description: "Order your favorite food online",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <html lang="en" className={`${inter.variable}`}>
-      <body suppressHydrationWarning className="font-sans antialiased">
-        <ErrorBoundary>
-          <FirebaseProvider>
-            <CartProvider>
-              {children}
-            </CartProvider>
-          </FirebaseProvider>
-        </ErrorBoundary>
-      </body>
+      <body className="antialiased">{children}</body>
     </html>
   );
 }

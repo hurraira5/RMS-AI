@@ -1,58 +1,25 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
     // ===============================================================
     // Assumed Data Model
     // ===============================================================
-    //
     // Collection: users
-    // Fields:
-    //   - uid: string (required)
-    //   - name: string (required, 1-100 chars)
-    //   - email: string (required, valid email)
-    //   - phone: string (optional)
-    //   - role: string (required, enum: ['admin', 'client'])
-    //   - createdAt: timestamp (required)
+    // Fields: uid, email, displayName, role, branchId, restaurantId, createdAt
     //
-    // Collection: products
-    // Fields:
-    //   - name: string (required, 1-200 chars)
-    //   - price: number (required, positive)
-    //   - originalPrice: number (optional, positive)
-    //   - image: string (required, valid URL)
-    //   - category: string (required)
-    //   - description: string (optional)
-    //   - isPopular: bool (optional)
+    // Collection: branches
+    // Fields: id, name, location, status, createdAt
     //
-    // Collection: categories
-    // Fields:
-    //   - label: string (required, 1-50 chars)
-    //   - order: int (optional)
+    // Collection: restaurants
+    // Fields: id, branchId, name, address, status, createdAt
     //
-    // Collection: orders
-    // Fields:
-    //   - uid: string (required)
-    //   - customerName: string (optional)
-    //   - email: string (optional)
-    //   - items: list (required, max 50 items)
-    //   - total: number (required, positive)
-    //   - status: string (required, enum: ['pending', 'accepted', 'preparing', 'delivered', 'cancelled'])
-    //   - orderType: string (required, enum: ['Delivery', 'Pick-Up', 'Car hop'])
-    //   - address: string (optional)
-    //   - landmark: string (optional)
-    //   - phone: string (optional)
-    //   - paymentMethod: string (required, enum: ['cod', 'bank'])
-    //   - instructions: string (optional)
-    //   - changeRequest: string (optional)
-    //   - createdAt: timestamp (required)
-    //
+    // Collection: invoices
+    // Fields: id, restaurantId, branchId, amount, date, status
     // ===============================================================
 
     // ===============================================================
     // Helper Functions
     // ===============================================================
-
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -61,102 +28,72 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    function isAdmin() {
-      return isAuthenticated() &&
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-          (request.auth.token.email == "hurrairacrypto@gmail.com" && request.auth.token.email_verified == true));
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    function hasRequiredFields(fields) {
-      return request.resource.data.keys().hasAll(fields);
+    function isSuperAdmin() {
+      return isAuthenticated() && getUserData().role == 'super_admin';
     }
 
-    function hasOnlyAllowedFields(fields) {
-      return request.resource.data.keys().hasOnly(fields);
+    function isBranchManager(branchId) {
+      return isAuthenticated() && getUserData().role == 'branch_manager' && getUserData().branchId == branchId;
+    }
+
+    function isRestaurantAdmin(restaurantId) {
+      return isAuthenticated() && getUserData().role == 'restaurant_admin' && getUserData().restaurantId == restaurantId;
     }
 
     function isValidEmail(email) {
       return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
     }
 
-    function isValidUrl(url) {
-      return url is string && (url.matches("^https://.*") || url.matches("^http://.*"));
-    }
-
     // ===============================================================
     // Domain Validators
     // ===============================================================
-
     function isValidUser(data) {
-      return hasRequiredFields(['uid', 'name', 'email', 'role', 'createdAt']) &&
-             hasOnlyAllowedFields(['uid', 'name', 'email', 'phone', 'role', 'createdAt']) &&
-             data.uid == request.auth.uid &&
-             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
-             isValidEmail(data.email) &&
-             data.role in ['admin', 'client'] &&
-             data.createdAt is timestamp;
-    }
-
-    function isValidProduct(data) {
-      return hasRequiredFields(['name', 'price', 'image', 'category']) &&
-             hasOnlyAllowedFields(['name', 'price', 'originalPrice', 'image', 'category', 'description', 'isPopular']) &&
-             data.name is string && data.name.size() > 0 && data.name.size() <= 200 &&
-             data.price is number && data.price > 0 &&
-             isValidUrl(data.image) &&
-             data.category is string;
-    }
-
-    function isValidOrder(data) {
-      return hasRequiredFields(['uid', 'items', 'total', 'status', 'orderType', 'paymentMethod', 'createdAt']) &&
-             hasOnlyAllowedFields(['uid', 'customerName', 'email', 'items', 'total', 'status', 'orderType', 'address', 'landmark', 'phone', 'paymentMethod', 'instructions', 'changeRequest', 'createdAt']) &&
-             (isAuthenticated() ? data.uid == request.auth.uid : data.uid == 'anonymous') &&
-             data.items is list && data.items.size() > 0 && data.items.size() <= 50 &&
-             data.total is number && data.total > 0 &&
-             data.status in ['pending', 'accepted', 'preparing', 'delivered', 'cancelled'] &&
-             data.orderType in ['Delivery', 'Pick-Up', 'Car hop'] &&
-             data.paymentMethod in ['cod', 'bank'] &&
-             data.createdAt is timestamp;
+      return data.uid is string && data.email is string && isValidEmail(data.email) &&
+             data.role in ['super_admin', 'branch_manager', 'restaurant_admin', 'user'];
     }
 
     // ===============================================================
     // Rules
     // ===============================================================
 
-    match /users/{userId} {
-      allow read: if isOwner(userId) || isAdmin();
-      allow create: if isAuthenticated() && isValidUser(request.resource.data) && 
-                      (request.resource.data.role == 'client' || isAdmin());
-      allow update: if isAuthenticated() && isValidUser(request.resource.data) && 
-                      (isOwner(userId) && request.resource.data.role == resource.data.role || isAdmin());
+    match /users/{uid} {
+      allow read: if isOwner(uid) || isSuperAdmin();
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(uid) || isSuperAdmin());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(uid) || isSuperAdmin());
     }
 
-    match /products/{productId} {
-      allow read: if true;
-      allow write: if isAdmin() && isValidProduct(request.resource.data);
+    match /branches/{branchId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
+      
+      match /deals/{dealId} {
+        allow read: if isAuthenticated();
+        allow write: if isSuperAdmin() || isBranchManager(branchId);
+      }
     }
 
-    match /categories/{categoryId} {
-      allow read: if true;
-      allow write: if isAdmin();
+    match /restaurants/{restaurantId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
+
+      match /categories/{categoryId} {
+        allow read: if isAuthenticated();
+        allow write: if isSuperAdmin() || isRestaurantAdmin(restaurantId);
+      }
+
+      match /items/{itemId} {
+        allow read: if isAuthenticated();
+        allow write: if isSuperAdmin() || isRestaurantAdmin(restaurantId);
+      }
     }
 
-    match /orders/{orderId} {
-      allow read: if (isAuthenticated() && (resource.data.uid == request.auth.uid || isAdmin())) || (resource.data.uid == 'anonymous');
-      allow create: if (isAuthenticated() || request.resource.data.uid == 'anonymous') && isValidOrder(request.resource.data);
-      allow update: if isAuthenticated() && (
-        // Clients can cancel their own pending orders
-        (resource.data.uid == request.auth.uid && 
-         request.resource.data.status == 'cancelled' && 
-         resource.data.status == 'pending' &&
-         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])) ||
-        // Admins can update anything
-        isAdmin()
-      );
-    }
-
-    // Default deny
-    match /{path=**} {
-      allow read, write: if false;
+    match /invoices/{invoiceId} {
+      allow read: if isSuperAdmin();
+      allow write: if isSuperAdmin();
     }
   }
 }

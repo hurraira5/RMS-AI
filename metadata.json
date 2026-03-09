@@ -1,5 +1,5 @@
 {
-  "name": "Fuse Food Delivery",
-  "description": "A premium fast-food ordering and delivery platform with real-time order tracking.",
+  "name": "Food Delivery App",
+  "description": "Order your favorite food online",
   "requestFramePermissions": ["geolocation"]
 }

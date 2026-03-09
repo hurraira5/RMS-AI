@@ -2,94 +2,108 @@
   "entities": {
     "User": {
       "title": "User",
-      "description": "User profile information",
+      "description": "User profile with role-based access control",
       "type": "object",
       "properties": {
         "uid": { "type": "string", "description": "Firebase Auth UID" },
-        "name": { "type": "string", "description": "Full name" },
-        "email": { "type": "string", "format": "email", "description": "Email address" },
-        "phone": { "type": "string", "description": "Mobile number" },
-        "role": { "type": "string", "enum": ["admin", "client"], "description": "User role" },
-        "createdAt": { "type": "string", "format": "date-time", "description": "Account creation time" }
-      },
-      "required": ["uid", "name", "email", "role"]
-    },
-    "Product": {
-      "title": "Product",
-      "description": "Menu item details",
-      "type": "object",
-      "properties": {
-        "name": { "type": "string", "description": "Product name" },
-        "price": { "type": "number", "description": "Current price" },
-        "originalPrice": { "type": "number", "description": "Original price for discounts" },
-        "image": { "type": "string", "format": "uri", "description": "Product image URL" },
-        "category": { "type": "string", "description": "Category ID" },
-        "description": { "type": "string", "description": "Product description" },
-        "isPopular": { "type": "boolean", "description": "Whether it shows in popular items" }
-      },
-      "required": ["name", "price", "image", "category"]
-    },
-    "Category": {
-      "title": "Category",
-      "description": "Food categories",
-      "type": "object",
-      "properties": {
-        "label": { "type": "string", "description": "Display label" },
-        "order": { "type": "integer", "description": "Display order" }
-      },
-      "required": ["label"]
-    },
-    "Order": {
-      "title": "Order",
-      "description": "Customer order details",
-      "type": "object",
-      "properties": {
-        "uid": { "type": "string", "description": "Customer UID" },
-        "customerName": { "type": "string" },
-        "email": { "type": "string" },
-        "items": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "productId": { "type": "string" },
-              "name": { "type": "string" },
-              "price": { "type": "number" },
-              "quantity": { "type": "integer" },
-              "addons": { "type": "array", "items": { "type": "string" } }
-            }
-          }
-        },
-        "total": { "type": "number" },
-        "status": { "type": "string", "enum": ["pending", "accepted", "preparing", "delivered", "cancelled"] },
-        "orderType": { "type": "string", "enum": ["Delivery", "Pick-Up", "Car hop"] },
-        "address": { "type": "string" },
-        "landmark": { "type": "string" },
-        "phone": { "type": "string" },
-        "paymentMethod": { "type": "string", "enum": ["cod", "bank"] },
-        "instructions": { "type": "string" },
-        "changeRequest": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["super_admin", "branch_manager", "restaurant_admin", "user"] },
+        "branchId": { "type": "string", "description": "Assigned branch for managers" },
+        "restaurantId": { "type": "string", "description": "Assigned restaurant for admins" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["uid", "items", "total", "status", "orderType", "createdAt"]
+      "required": ["uid", "email", "role"]
+    },
+    "Branch": {
+      "title": "Branch",
+      "description": "A geographical branch containing multiple restaurants",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "location": { "type": "string" },
+        "status": { "type": "string", "enum": ["enabled", "disabled"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "status"]
+    },
+    "Restaurant": {
+      "title": "Restaurant",
+      "description": "An individual restaurant within a branch",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "branchId": { "type": "string" },
+        "name": { "type": "string" },
+        "address": { "type": "string" },
+        "status": { "type": "string", "enum": ["enabled", "disabled"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["branchId", "name", "status"]
+    },
+    "MenuCategory": {
+      "title": "MenuCategory",
+      "description": "Categories for menu items (e.g., Pizza, Burgers)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "restaurantId": { "type": "string" },
+        "name": { "type": "string" }
+      },
+      "required": ["restaurantId", "name"]
+    },
+    "MenuItem": {
+      "title": "MenuItem",
+      "description": "Individual food items in a restaurant's menu",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "restaurantId": { "type": "string" },
+        "categoryId": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "imageUrl": { "type": "string" }
+      },
+      "required": ["restaurantId", "categoryId", "name", "price"]
+    },
+    "Deal": {
+      "title": "Deal",
+      "description": "Promotional deals for a branch",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "branchId": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "discount": { "type": "number" },
+        "status": { "type": "string", "enum": ["active", "expired"] }
+      },
+      "required": ["branchId", "name", "discount"]
+    },
+    "Invoice": {
+      "title": "Invoice",
+      "description": "Financial records for restaurants and branches",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "restaurantId": { "type": "string" },
+        "branchId": { "type": "string" },
+        "amount": { "type": "number" },
+        "date": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["paid", "pending"] }
+      },
+      "required": ["amount", "date", "status"]
     }
   },
   "firestore": {
-    "/users/{userId}": {
-      "schema": "User",
-      "description": "User profiles"
-    },
-    "/products/{productId}": {
-      "schema": "Product",
-      "description": "Menu items"
-    },
-    "/categories/{categoryId}": {
-      "schema": "Category",
-      "description": "Menu categories"
-    },
-    "/orders/{orderId}": {
-      "schema": "Order",
-      "description": "Customer orders"
-    }
+    "/users/{uid}": { "schema": "User", "description": "User profiles" },
+    "/branches/{branchId}": { "schema": "Branch", "description": "Branch details" },
+    "/restaurants/{restaurantId}": { "schema": "Restaurant", "description": "Restaurant details" },
+    "/restaurants/{restaurantId}/categories/{categoryId}": { "schema": "MenuCategory", "description": "Menu categories for a restaurant" },
+    "/restaurants/{restaurantId}/items/{itemId}": { "schema": "MenuItem", "description": "Menu items for a restaurant" },
+    "/branches/{branchId}/deals/{dealId}": { "schema": "Deal", "description": "Deals for a branch" },
+    "/invoices/{invoiceId}": { "schema": "Invoice", "description": "System-wide invoices" }
   }
 }
