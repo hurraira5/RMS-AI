@@ -1,0 +1,95 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "name": { "type": "string", "description": "Full name" },
+        "email": { "type": "string", "format": "email", "description": "Email address" },
+        "phone": { "type": "string", "description": "Mobile number" },
+        "role": { "type": "string", "enum": ["admin", "client"], "description": "User role" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Account creation time" }
+      },
+      "required": ["uid", "name", "email", "role"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Menu item details",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Product name" },
+        "price": { "type": "number", "description": "Current price" },
+        "originalPrice": { "type": "number", "description": "Original price for discounts" },
+        "image": { "type": "string", "format": "uri", "description": "Product image URL" },
+        "category": { "type": "string", "description": "Category ID" },
+        "description": { "type": "string", "description": "Product description" },
+        "isPopular": { "type": "boolean", "description": "Whether it shows in popular items" }
+      },
+      "required": ["name", "price", "image", "category"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Food categories",
+      "type": "object",
+      "properties": {
+        "label": { "type": "string", "description": "Display label" },
+        "order": { "type": "integer", "description": "Display order" }
+      },
+      "required": ["label"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Customer order details",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Customer UID" },
+        "customerName": { "type": "string" },
+        "email": { "type": "string" },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "productId": { "type": "string" },
+              "name": { "type": "string" },
+              "price": { "type": "number" },
+              "quantity": { "type": "integer" },
+              "addons": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        },
+        "total": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "accepted", "preparing", "delivered", "cancelled"] },
+        "orderType": { "type": "string", "enum": ["Delivery", "Pick-Up", "Car hop"] },
+        "address": { "type": "string" },
+        "landmark": { "type": "string" },
+        "phone": { "type": "string" },
+        "paymentMethod": { "type": "string", "enum": ["cod", "bank"] },
+        "instructions": { "type": "string" },
+        "changeRequest": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "items", "total", "status", "orderType", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Menu items"
+    },
+    "/categories/{categoryId}": {
+      "schema": "Category",
+      "description": "Menu categories"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Customer orders"
+    }
+  }
+}
